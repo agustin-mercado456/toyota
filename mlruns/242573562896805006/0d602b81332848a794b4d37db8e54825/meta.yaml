@@ -1,0 +1,16 @@
+artifact_uri: mlflow-artifacts:/242573562896805006/0d602b81332848a794b4d37db8e54825/artifacts
+deleted_time: 1747834409719
+end_time: 1747705767418
+entry_point_name: ''
+experiment_id: '242573562896805006'
+lifecycle_stage: deleted
+run_id: 0d602b81332848a794b4d37db8e54825
+run_name: popular-lark-378
+run_uuid: 0d602b81332848a794b4d37db8e54825
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1747705760547
+status: 3
+tags: []
+user_id: agustin

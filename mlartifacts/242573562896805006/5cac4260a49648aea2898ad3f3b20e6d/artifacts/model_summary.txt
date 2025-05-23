@@ -1,0 +1,34 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                  price   R-squared:                       0.712
+Model:                            OLS   Adj. R-squared:                  0.710
+Method:                 Least Squares   F-statistic:                     253.2
+Date:                Tue, 20 May 2025   Prob (F-statistic):          9.68e-136
+Time:                        10:19:53   Log-Likelihood:                -4272.0
+No. Observations:                 517   AIC:                             8556.
+Df Residuals:                     511   BIC:                             8581.
+Df Model:                           5                                         
+Covariance Type:            nonrobust                                         
+=======================================================================================
+                          coef    std err          t      P>|t|      [0.025      0.975]
+---------------------------------------------------------------------------------------
+const                1.409e+04    343.515     41.006      0.000    1.34e+04    1.48e+04
+automatic           -1.465e-10   3.56e-12    -41.177      0.000   -1.54e-10    -1.4e-10
+doors                 142.2681     47.505      2.995      0.003      48.939     235.597
+quarterly_tax           8.0130      3.501      2.289      0.023       1.135      14.891
+mfr_guarantee         253.2380     86.076      2.942      0.003      84.131     422.345
+airco                 657.0634     89.969      7.303      0.000     480.309     833.818
+automatic_airco              0          0        nan        nan           0           0
+radio                        0          0        nan        nan           0           0
+age_08_04_calculada   -99.0435      3.346    -29.600      0.000    -105.617     -92.470
+==============================================================================
+Omnibus:                        8.622   Durbin-Watson:                   1.956
+Prob(Omnibus):                  0.013   Jarque-Bera (JB):               10.413
+Skew:                           0.194   Prob(JB):                      0.00548
+Kurtosis:                       3.577   Cond. No.                          inf
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[2] The smallest eigenvalue is      0. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.

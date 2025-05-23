@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/242573562896805006/52d8032860334d088536c8ba20e6c135/artifacts
+end_time: 1747862640708
+entry_point_name: ''
+experiment_id: '242573562896805006'
+lifecycle_stage: active
+run_id: 52d8032860334d088536c8ba20e6c135
+run_name: entrenar_evaluar_modelo_mco
+run_uuid: 52d8032860334d088536c8ba20e6c135
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1747862632509
+status: 3
+tags: []
+user_id: agustin

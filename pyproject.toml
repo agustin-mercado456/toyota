@@ -1,0 +1,39 @@
+[project]
+name = "parcial-toyota"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "agustin-mercado456",email = "agustin20015@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.9,<3.13"
+
+dependencies = [
+    "dagster-webserver (>=1.10.14,<2.0.0)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "scipy (<1.15.3)",
+    "seaborn (>=0.13.2,<0.14.0)",
+    "scikit-learn (>=1.6.1,<2.0.0)",
+    "statsmodels (>=0.14.4,<0.15.0)",
+    "mlflow (>=2.22.0,<3.0.0)",
+    "dagster-mlflow (>=0.26.14,<0.27.0)",
+    "dagstermill (>=0.26.14,<0.27.0)",
+    "jupyterlab (>=4.4.2,<5.0.0)",
+    "notebook (>=7.4.2,<8.0.0)"
+]
+
+[project.optional-dependencies]
+dev = [
+    "dagster-webserver", 
+    "pytest",
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+
+[tool.dagster]
+module_name = "parcial_toyota.definitions"
+code_location_name = "parcial_toyota"

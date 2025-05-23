@@ -1,0 +1,29 @@
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:                  price   R-squared:                       0.749
+Model:                            OLS   Adj. R-squared:                  0.748
+Method:                 Least Squares   F-statistic:                     446.9
+Date:                Wed, 21 May 2025   Prob (F-statistic):          8.05e-222
+Time:                        10:58:16   Log-Likelihood:                -6388.0
+No. Observations:                 754   AIC:                         1.279e+04
+Df Residuals:                     748   BIC:                         1.282e+04
+Df Model:                           5                                         
+Covariance Type:            nonrobust                                         
+=======================================================================================
+                          coef    std err          t      P>|t|      [0.025      0.975]
+---------------------------------------------------------------------------------------
+const                1.635e+04    205.590     79.515      0.000    1.59e+04    1.68e+04
+mfr_guarantee         524.6229     87.770      5.977      0.000     352.318     696.928
+airco                 569.2791    100.742      5.651      0.000     371.509     767.050
+mistlamps             409.5925    111.496      3.674      0.000     190.710     628.475
+sport_model           180.2463     95.651      1.884      0.060      -7.530     368.023
+age_08_04_calculada  -119.8791      3.013    -39.784      0.000    -125.795    -113.964
+==============================================================================
+Omnibus:                       62.474   Durbin-Watson:                   1.954
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):              174.579
+Skew:                          -0.406   Prob(JB):                     1.23e-38
+Kurtosis:                       5.213   Cond. No.                         304.
+==============================================================================
+
+Notes:
+[1] Standard Errors assume that the covariance matrix of the errors is correctly specified.

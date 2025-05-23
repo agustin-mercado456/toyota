@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/242573562896805006/040a6e9b1b134b3c8a8a732f27aa2b99/artifacts
+end_time: 1747834269768
+entry_point_name: ''
+experiment_id: '242573562896805006'
+lifecycle_stage: active
+run_id: 040a6e9b1b134b3c8a8a732f27aa2b99
+run_name: __ASSET_JOB
+run_uuid: 040a6e9b1b134b3c8a8a732f27aa2b99
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1747834252506
+status: 3
+tags: []
+user_id: agustin

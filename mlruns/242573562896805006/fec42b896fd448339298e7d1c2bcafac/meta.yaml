@@ -1,0 +1,16 @@
+artifact_uri: mlflow-artifacts:/242573562896805006/fec42b896fd448339298e7d1c2bcafac/artifacts
+deleted_time: 1747834409637
+end_time: 1747748828959
+entry_point_name: ''
+experiment_id: '242573562896805006'
+lifecycle_stage: deleted
+run_id: fec42b896fd448339298e7d1c2bcafac
+run_name: toyota
+run_uuid: fec42b896fd448339298e7d1c2bcafac
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1747748827787
+status: 3
+tags: []
+user_id: agustin

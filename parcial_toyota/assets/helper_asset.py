@@ -24,5 +24,22 @@ def regresion_modelo(x_train, y_train):
     return modelo
 
 
+def filtrar_columna_por_rango(serie: pd.Series, inferior: float, superior: float):
+    """
+    Filtra una Serie por valores dentro de un rango.
+
+    Parámetros:
+    - serie: Serie de pandas (columna del DataFrame)
+    - inferior: límite inferior del rango
+    - superior: límite superior del rango
+
+    Retorna:
+    - valores_filtrados: Serie con los valores dentro del rango
+    - mascara: Serie booleana para aplicar al DataFrame original
+    """
+    mascara = (serie >= inferior) & (serie <= superior)
+    valores_filtrados = serie[mascara]
+    return valores_filtrados, mascara
+
 
 

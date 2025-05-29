@@ -1,0 +1,84 @@
+version: 2
+
+sources:
+  - name: toyota_raw_data
+    schema: source_1
+    database: toyota_db
+    tables:
+      - name: toyota_dataset
+        description: "Toyota car dataset with technical and commercial attributes."
+        columns:
+          - name: Id
+          
+          - name: HP
+          
+          - name: KM
+          
+          - name: cc
+          
+          - name: ABS
+          
+          - name: Airco
+          
+          - name: Doors
+          
+          - name: Gears
+          
+          - name: Model
+          
+          - name: Price
+          
+          - name: Radio
+          
+          - name: Weight
+          
+          - name: Tow_Bar
+          
+          - name: Airbag_1
+          
+          - name: Airbag_2
+          
+          - name: Mfg_Year
+          
+          - name: Age_08_04
+          
+          - name: Automatic
+          
+          - name: CD_Player
+          
+          - name: Cylinders
+          
+          - name: Fuel_Type
+          
+          - name: Met_Color
+          
+          - name: Mfg_Month
+          
+          - name: Mistlamps
+          
+          - name: Sport_Model
+          
+          - name: Central_Lock
+          
+          - name: Metallic_Rim
+          
+          - name: Boardcomputer
+          
+          - name: Mfr_Guarantee
+          
+          - name: Quarterly_Tax
+          
+          - name: Power_Steering
+          
+          - name: Radio_cassette
+          
+          - name: Automatic_airco
+          
+          - name: BOVAG_Guarantee
+          
+          - name: Powered_Windows
+          
+          - name: Backseat_Divider
+          
+          - name: Guarantee_Period
+          

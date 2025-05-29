@@ -19,7 +19,9 @@ dependencies = [
     "dagster-mlflow (>=0.26.14,<0.27.0)",
     "dagstermill (>=0.26.14,<0.27.0)",
     "jupyterlab (>=4.4.2,<5.0.0)",
-    "notebook (>=7.4.2,<8.0.0)"
+    "notebook (>=7.4.2,<8.0.0)",
+    "dagster-airbyte (>=0.26.17,<0.27.0)",
+    "dagster-dbt (>=0.26.17,<0.27.0)"
 ]
 
 [project.optional-dependencies]

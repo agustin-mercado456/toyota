@@ -1,8 +1,9 @@
 artifact_uri: mlflow-artifacts:/242573562896805006/52d8032860334d088536c8ba20e6c135/artifacts
+deleted_time: 1748116403911
 end_time: 1747862640708
 entry_point_name: ''
 experiment_id: '242573562896805006'
-lifecycle_stage: active
+lifecycle_stage: deleted
 run_id: 52d8032860334d088536c8ba20e6c135
 run_name: entrenar_evaluar_modelo_mco
 run_uuid: 52d8032860334d088536c8ba20e6c135

@@ -1,0 +1,12 @@
+dbt_toyota_1:
+  outputs:
+    dev:
+      dbname: toyota_db
+      host: localhost
+      pass: airbyte
+      port: 5432
+      schema: target_1
+      threads: 1
+      type: postgres
+      user: user
+  target: dev

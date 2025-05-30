@@ -1,47 +1,132 @@
-# parcial_toyota
+# Toyota Price Prediction Project
 
-This is a [Dagster](https://dagster.io/) project scaffolded with [`dagster project scaffold`](https://docs.dagster.io/guides/build/projects/creating-a-new-project).
+Este proyecto implementa un sistema de predicción de precios para vehículos Toyota utilizando diferentes modelos de regresión y técnicas de machine learning.
 
-## Getting started
+## Configuración del Entorno
 
-First, install your Dagster code location as a Python package. By using the --editable flag, pip will install your Python package in ["editable mode"](https://pip.pypa.io/en/latest/topics/local-project-installs/#editable-installs) so that as you develop, local code changes will automatically apply.
-
-```bash
-pip install -e ".[dev]"
+### Docker Compose
+El proyecto incluye una configuración de Docker Compose para la base de datos y pgAdmin:
+```
+docker-compose.yml
 ```
 
-Then, start the Dagster UI web server:
+Servicios incluidos:
+- PostgreSQL: Base de datos principal
+- pgAdmin: Interfaz web para administración de la base de datos
 
+Para iniciar los servicios:
 ```bash
-dagster dev
+docker-compose up -d
 ```
 
-Open http://localhost:3000 with your browser to see the project.
-
-You can start writing assets in `parcial_toyota/assets.py`. The assets are automatically loaded into the Dagster code location as you define them.
-
-## Development
-
-### Adding new Python dependencies
-
-You can specify new Python dependencies in `setup.py`.
-
-### Unit testing
-
-Tests are in the `parcial_toyota_tests` directory and you can run tests using `pytest`:
-
-```bash
-pytest parcial_toyota_tests
+### Conda Environment
+El archivo de entorno conda se encuentra en la raíz del proyecto:
+```
+environment.yml
 ```
 
-### Schedules and sensors
+Para crear y activar el entorno:
+```bash
+# Crear el entorno
+conda env create -f environment.yml
 
-If you want to enable Dagster [Schedules](https://docs.dagster.io/guides/automate/schedules/) or [Sensors](https://docs.dagster.io/guides/automate/sensors/) for your jobs, the [Dagster Daemon](https://docs.dagster.io/guides/deploy/execution/dagster-daemon) process must be running. This is done automatically when you run `dagster dev`.
+# Activar el entorno
+conda activate toyota
 
-Once your Dagster Daemon is running, you can start turning on schedules and sensors for your jobs.
+# Instalar dependencias con Poetry
+poetry install
+```
 
-## Deploy on Dagster+
+### DBT Profile
+El perfil de DBT se encuentra en:
+```
+dbt/profiles.yml
+```
 
-The easiest way to deploy your Dagster project is to use Dagster+.
+## Documentación Detallada
 
-Check out the [Dagster+ documentation](https://docs.dagster.io/dagster-plus/) to learn more.
+Para una explicación detallada del proceso de limpieza de datos y entrenamiento de modelos, consulta el notebook en:
+`parcial_toyota/documentacion/`
+
+El notebook contiene:
+- Proceso completo de limpieza y preprocesamiento de datos
+- Análisis exploratorio de datos
+- Detalles del entrenamiento de cada modelo
+- Visualizaciones y resultados detallados
+
+### Resultados y Conclusiones
+En el notebook de documentación encontrarás:
+- Comparación detallada de los modelos implementados
+- Métricas de rendimiento para cada modelo
+- Análisis de las variables más importantes
+- Conclusiones sobre el mejor modelo y su rendimiento
+- Recomendaciones para futuras mejoras
+
+## Estructura del Proyecto
+
+El proyecto está organizado en assets que manejan diferentes aspectos del pipeline de datos y modelado:
+
+### Assets Principales
+
+1. **Ingestión de Datos**
+   - `cargar_datos`: Carga el dataset inicial desde la fuente de datos al origen
+
+2. **Preparación de Datos**
+   - `preparar_datos`: Eda y limpieza de datos
+   - `transformar_datos`: Aplica transformaciones necesarias para el modelado
+
+3. **Entrenamiento de Modelos**
+   - `entrenar_evalular_modelo_ridge`: Implementa regresión Ridge
+   - `entrenar_evalular_modelo_lasso`: Implementa regresión Lasso
+   - `entrenar_modelo_evaluar_mco`: Implementa regresión MCO (Mínimos Cuadrados Ordinarios)
+   - `entrenar_evaluar_modelo_pca`: Implementa regresión con PCA
+
+   Cada modelo es entrenado utilizando validación cruzada con k=5 folds y sus resultados son registrados en MLflow como experimentos separados.
+
+4. **Selección de Modelos**
+   - `seleccion_modelo`: Compara y selecciona el mejor modelo basado en múltiples métricas
+
+## Métricas de Evaluación
+
+Los modelos son evaluados utilizando las siguientes métricas:
+- MSE (Error Cuadrático Medio)
+- MAE (Error Absoluto Medio)
+- MAPE (Error Porcentual Absoluto Medio)
+- R² (Coeficiente de Determinación)
+- RMSE (Raíz del Error Cuadrático Medio)
+
+## Integración con MLflow
+
+El proyecto utiliza MLflow para el seguimiento de experimentos y modelos:
+
+### Seguimiento de Métricas
+- Registro de métricas de rendimiento para cada modelo
+- Comparación automática de modelos
+- Almacenamiento de artefactos y resultados
+
+### Características de MLflow
+- Registro de métricas de rendimiento
+- Almacenamiento de parámetros de modelos
+- Seguimiento de experimentos
+- Visualización de resultados
+
+### Experimentos en MLflow
+Cada modelo tiene su propio experimento en MLflow donde se registran:
+- Métricas de cada fold de la validación cruzada
+- Parámetros del modelo
+- Artefactos relevantes
+- Resultados finales del modelo
+
+## Uso
+
+1. Asegúrate de tener todas las dependencias instaladas
+2. Ejecuta el pipeline de Dagster
+3. Los resultados y métricas se registrarán automáticamente en MLflow
+
+
+
+## Notas
+- Los modelos se entrenan y evalúan automáticamente
+- Los resultados se registran en MLflow para fácil comparación
+- Se selecciona automáticamente el mejor modelo basado en múltiples métricas
+

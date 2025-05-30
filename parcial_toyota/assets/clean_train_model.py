@@ -13,19 +13,21 @@ from pathlib import Path
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error, mean_absolute_error , r2_score
 from sklearn.decomposition import PCA
-
+import seaborn as sns
+from scipy import stats
+from statsmodels.graphics.regressionplots import plot_leverage_resid2
 
 
 
 
 
 analysis_notebook = define_dagstermill_asset(
-    #deps=['reasignacion'],
+    
     name="eda_toyota",  
-    notebook_path=file_relative_path(__file__, "../notebooks/dataset.ipynb"),  # JOIN PATH
+    notebook_path=file_relative_path(__file__, "../notebooks/eda.ipynb"),  
     group_name="RAW_DATA_PREPARATION",  
     ins={
-        "df_toyota": AssetIn(key=AssetKey("df_toyota"),input_manager_key= "postgres_io_manager")  # Conexión al output de clean_dataset
+        "df_toyota": AssetIn(key=AssetKey("df_toyota"),input_manager_key= "postgres_io_manager")  
     },
     io_manager_key="io_manager",
 )
@@ -50,7 +52,7 @@ def seleccion_lambda_ridge(context,df_toyota):
     # Unir las dummies al DataFrame original
     df_toyota_ridge = pd.concat([df_toyota_ridge, dummies], axis=1)
 
-# Eliminar la columna original 'fuel_type_encoded'
+    # Eliminar la columna original 'fuel_type_encoded'
     df_toyota_ridge = df_toyota_ridge.drop('fuel_type_encoded', axis=1)
 
     x = df_toyota_ridge.drop(columns=['price'])
@@ -98,8 +100,7 @@ def entrenar_evalular_modelo_ridge(context, ridge):
 
     scaler_x = StandardScaler()
     X_scaled = scaler_x.fit_transform(X)
-    #scaler_y = StandardScaler()
-    #y_scaled = (scaler_y.fit_transform(y.values.reshape(-1, 1))).ravel()
+    
 
 
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -134,7 +135,7 @@ def entrenar_evalular_modelo_ridge(context, ridge):
 
                 mse = mean_squared_error(y_test, y_pred)
                 mae = mean_absolute_error(y_test, y_pred)
-                # Add small epsilon to avoid division by zero in MAPE
+                
                 epsilon = 1e-10
                 mape = np.mean(np.abs((y_test - y_pred) / (y_test + epsilon))) * 100
                 r2 = r2_score(y_test, y_pred)
@@ -152,32 +153,49 @@ def entrenar_evalular_modelo_ridge(context, ridge):
 
               
                 # ---------- analisis residuales ----------
-                residuals = y_test - y_pred
-                fitted_vals = y_pred
+                fig, axs = plt.subplots(2, 3, figsize=(18, 10))
+                fig.suptitle(f'Análisis del Fold {fold}', fontsize=16)
 
-                fig, ax = plt.subplots(2, 2, figsize=(14, 10))
-                ax[0, 0].hist(residuals, bins=30, color='skyblue', edgecolor='black')
-                ax[0, 0].set_title("Histograma de residuos")
-                ax[0, 0].set_xlabel("Error")
-                ax[0, 0].set_ylabel("Frecuencia")
+                resid = y_test - y_pred
+                standardized_residuals = resid / np.std(resid)
+                sqrt_standardized_residuals = np.sqrt(np.abs(standardized_residuals))
 
-                # grafico de predeciiones vs valores reales cin recta de 45 grados
-                ax[1,1].scatter(y_test, y_pred, alpha=0.7)
-                ax[1,1].set_title("Predicciones vs Valores reales")
-                ax[1,1].set_xlabel("Valores reales")
-                ax[1,1].set_ylabel("Predicciones")
-                ax[1,1].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
-                ax[1,1].grid(True)
+                # 1. Histograma residuos
+                axs[0, 0].hist(resid, bins=30, color='dodgerblue', edgecolor='k')
+                axs[0, 0].set_title('Histograma de residuos')
+                axs[0, 0].set_xlabel('Residuos')
+                axs[0, 0].set_ylabel('Frecuencia')
 
+                # 2. Real vs predicho
+                axs[0, 1].scatter(y_test, y_pred, color='dodgerblue', alpha=0.7, edgecolors='k')
+                axs[0, 1].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+                axs[0, 1].set_title('Precio real vs predicho')
+                axs[0, 1].set_xlabel('Precio real')
+                axs[0, 1].set_ylabel('Precio predicho')
 
-                sm.qqplot(residuals, line='45', fit=True, ax=ax[0, 1])
-                ax[0, 1].set_title("QQ plot de los residuos")
+                # 3. QQ plot residuos
+                sm.qqplot(resid, line='45', fit=True, ax=axs[0, 2])
+                axs[0, 2].set_title('QQ Plot de residuos')
 
-                ax[1, 0].scatter(fitted_vals, residuals, alpha=0.5)
-                ax[1, 0].axhline(0, color='red', linestyle='--')
-                ax[1, 0].set_title("Residuos vs Valores ajustados")
-                ax[1, 0].set_xlabel("Valores ajustados")
-                ax[1, 0].set_ylabel("Residuos")
+                # 4. Residuos vs predicho
+                axs[1, 0].scatter(y_pred, resid, color='dodgerblue', alpha=0.7, edgecolors='k')
+                axs[1, 0].axhline(0, color='r', linestyle='--', lw=2)
+                axs[1, 0].set_title('Residuos vs Precio predicho')
+                axs[1, 0].set_xlabel('Precio predicho')
+                axs[1, 0].set_ylabel('Residuos')
+
+                # 5. Scale-Location plot
+                sns.scatterplot(x=y_pred, y=sqrt_standardized_residuals, ax=axs[1, 1], color='dodgerblue')
+                sns.regplot(x=y_pred, y=sqrt_standardized_residuals, scatter=False, ci=False, lowess=True, color='red', ax=axs[1, 1])
+                axs[1, 1].set_title('Scale-Location')
+                axs[1, 1].set_xlabel('Valores ajustados')
+                axs[1, 1].set_ylabel('√|Residuos estandarizados|')
+                axs[1, 1].grid(True)
+
+                # 6. Residuals vs Leverage con Cook's Distance
+               
+                axs[1, 2].axis('off')
+    
 
             
                 plt.tight_layout()
@@ -227,7 +245,7 @@ def seleccion_variables_lasso(context,df_toyota):
 
     dummies = pd.get_dummies(df_toyota_lasso['fuel_type_encoded'], prefix='fuel_type')
 
-# Unir las dummies al DataFrame original
+    # Unir las dummies al DataFrame original
     df_toyota_lasso = pd.concat([df_toyota_lasso, dummies], axis=1)
 
     # Eliminar la columna original 'fuel_type_encoded'
@@ -256,7 +274,7 @@ def seleccion_variables_lasso(context,df_toyota):
     # Obtener coeficientes del modelo entrenado
     coefficients = lasso_cv_model.coef_
 
-    # Crear DataFrame para visualización
+    # Crear DataFrame 
     coef_df = pd.DataFrame({
         'Variable': feature_names,
         'Coeficiente': coefficients
@@ -294,8 +312,7 @@ def entrenar_evalular_modelo_lasso(context, df_toyota_lasso_filtrado):
     scaler_x = StandardScaler()
     X_scaled = scaler_x.fit_transform(X)
 
-    # scaler_y = StandardScaler()
-    # y_scaled = (scaler_y.fit_transform(y.values.reshape(-1, 1))).ravel()
+
 
     lambdas = np.logspace(-1, 10, num=1000)
     lasso_cv = LassoCV(alphas=lambdas, cv=5, random_state=42, max_iter=10000)
@@ -334,7 +351,7 @@ def entrenar_evalular_modelo_lasso(context, df_toyota_lasso_filtrado):
 
                 mse = mean_squared_error(y_test, y_pred)
                 mae = mean_absolute_error(y_test, y_pred)
-                # Add small epsilon to avoid division by zero in MAPE
+           
                 epsilon = 1e-10
                 mape = np.mean(np.abs((y_test - y_pred) / (y_test + epsilon))) * 100
                 r2 = r2_score(y_test, y_pred)
@@ -350,40 +367,54 @@ def entrenar_evalular_modelo_lasso(context, df_toyota_lasso_filtrado):
                 mlflow.log_metric("r2_prueba", r2)
                 mlflow.log_metric("rmse_prueba", rmse)
 
-                # ---------- Gráfico de residuos ----------
+                # ---------- analisis de residuos----------
                 
                
+                residuos = y_test - y_pred
+                standardized_residuals = residuos / np.std(residuos)
+                sqrt_standardized_residuals = np.sqrt(np.abs(standardized_residuals))
 
-                # ---------- Gráficos diagnósticos ----------
-                residuals = y_test - y_pred
-                fitted_vals = y_pred
+                # Crear figura y subplots 2x3
+                fig, axs = plt.subplots(2, 3, figsize=(18, 10))
+                fig.suptitle(f'Análisis de diagnóstico - Lasso Fold {fold}', fontsize=16)
 
-                # grafico de predeciiones vs valores reales cin recta de 45 grados
-                
+                # 1. Histograma de residuos
+                axs[0, 0].hist(residuos, bins=30, color='mediumseagreen', edgecolor='k')
+                axs[0, 0].set_title('Histograma de residuos')
+                axs[0, 0].set_xlabel('Residuos')
+                axs[0, 0].set_ylabel('Frecuencia')
 
+                # 2. Real vs Predicho
+                axs[0, 1].scatter(y_test, y_pred, color='mediumseagreen', alpha=0.7, edgecolors='k')
+                axs[0, 1].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2)
+                axs[0, 1].set_title('Precio real vs predicho')
+                axs[0, 1].set_xlabel('Precio real')
+                axs[0, 1].set_ylabel('Precio predicho')
 
-                fig, ax = plt.subplots(2, 2, figsize=(14, 10))
-                ax[0, 0].hist(residuals, bins=30, color='skyblue', edgecolor='black')
-                ax[0, 0].set_title("Histograma de residuos")
-                ax[0, 0].set_xlabel("Error")
-                ax[0, 0].set_ylabel("Frecuencia")
+                # 3. QQ Plot de residuos
+                sm.qqplot(residuos, line='45', fit=True, ax=axs[0, 2])
+                axs[0, 2].set_title('QQ Plot de residuos')
 
+                # 4. Residuos vs Predicho
+                axs[1, 0].scatter(y_pred, residuos, color='mediumseagreen', alpha=0.7, edgecolors='k')
+                axs[1, 0].axhline(0, color='r', linestyle='--', lw=2)
+                axs[1, 0].set_title('Residuos vs Precio predicho')
+                axs[1, 0].set_xlabel('Precio predicho')
+                axs[1, 0].set_ylabel('Residuos')
 
-                ax[1,1].scatter(y_test, y_pred, alpha=0.7)
-                ax[1,1].set_title("Predicciones vs Valores reales")
-                ax[1,1].set_xlabel("Valores reales")
-                ax[1,1].set_ylabel("Predicciones")
-                ax[1,1].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
-                ax[1,1].grid(True)
+                # 5. Scale-Location plot
+                sns.scatterplot(x=y_pred, y=sqrt_standardized_residuals, ax=axs[1, 1], color='mediumseagreen')
+                sns.regplot(x=y_pred, y=sqrt_standardized_residuals, scatter=False, ci=False, lowess=True, color='red', ax=axs[1, 1])
+                axs[1, 1].set_title('Scale-Location')
+                axs[1, 1].set_xlabel('Valores ajustados')
+                axs[1, 1].set_ylabel('√|Residuos estandarizados|')
+                axs[1, 1].grid(True)
 
-                sm.qqplot(residuals, line='45', fit=True, ax=ax[0, 1])
-                ax[0, 1].set_title("QQ plot de los residuos")
+                # 6. Residuals vs Leverage con Cook's Distance
+                # Nota: Lasso no tiene directamente leverage ni influencia estadística como OLS.
+              
+                axs[1, 2].axis('off')
 
-                ax[1, 0].scatter(fitted_vals, residuals, alpha=0.5)
-                ax[1, 0].axhline(0, color='red', linestyle='--')
-                ax[1, 0].set_title("Residuos vs Valores ajustados")
-                ax[1, 0].set_xlabel("Valores ajustados")
-                ax[1, 0].set_ylabel("Residuos")
 
                 
                 plt.tight_layout()
@@ -426,7 +457,7 @@ def entrenar_evalular_modelo_lasso(context, df_toyota_lasso_filtrado):
     deps=['eda_toyota'],
     group_name="MODEL_TRAING_TEST",
     ins={
-        "df_toyota": AssetIn(key=AssetKey("eda_toyota"))  # Conexión al output de clean_dataset
+        "df_toyota": AssetIn(key=AssetKey("eda_toyota")) 
     }
 
 )
@@ -501,11 +532,13 @@ def entrenar_modelo_evaluar_mco(context, df_escaler):
 
     if mlflow.active_run():
         mlflow.end_run()
+    
+    
 
     with mlflow.start_run(run_name="validacion_cruzada_regresion_mco") as main_run:
         for fold, (train_idx, test_idx) in enumerate(kf.split(X), 1):
             with mlflow.start_run(run_name=f"fold_{fold}", nested=True):
-                mlflow.statsmodels.autolog()
+               
 
                 X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
                 y_train, y_test =y.iloc[train_idx], y.iloc[test_idx]
@@ -516,7 +549,7 @@ def entrenar_modelo_evaluar_mco(context, df_escaler):
                 model = sm.OLS(y_train, X_train_const).fit()
                 y_pred = model.predict(X_test_const)
 
-                # Inverse transform predictions and actual values for MAPE calculation
+                
                 y_test_original = scaler.inverse_transform(y_test.to_numpy().reshape(-1, 1)).ravel()
 
 
@@ -524,7 +557,7 @@ def entrenar_modelo_evaluar_mco(context, df_escaler):
 
                 mse = mean_squared_error(y_test_original, y_pred_original)
                 mae = mean_absolute_error(y_test_original, y_pred_original)
-                # Calculate MAPE with original scale values
+           
                 mape = np.mean(np.abs((y_test_original - y_pred_original) / y_test_original)) * 100
                 
                 r2 = r2_score(y_test, y_pred)
@@ -551,33 +584,58 @@ def entrenar_modelo_evaluar_mco(context, df_escaler):
 
                
 
-                # ---------- Gráficos diagnósticos ----------
-                residuals = y_test_original - y_pred_original
-                fitted_vals = y_pred_original
+                # ---------- analisis de residuos----------
+                residuos = y_test_original - y_pred_original
+                standardized_residuals = residuos / np.std(residuos)
+                sqrt_standardized_residuals = np.sqrt(np.abs(standardized_residuals))
 
-                fig, ax = plt.subplots(2, 2, figsize=(14, 10))
-                ax[0, 0].hist(residuals, bins=30, color='skyblue', edgecolor='black')
-                ax[0, 0].set_title("Histograma de residuos")
-                ax[0, 0].set_xlabel("Error")
-                ax[0, 0].set_ylabel("Frecuencia")
-
-                sm.qqplot(residuals, line='45', fit=True, ax=ax[0, 1])
-                ax[0, 1].set_title("QQ plot de los residuos")
-
-                ax[1, 0].scatter(fitted_vals, residuals, alpha=0.5)
-                ax[1, 0].axhline(0, color='red', linestyle='--')
-                ax[1, 0].set_title("Residuos vs Valores ajustados")
-                ax[1, 0].set_xlabel("Valores ajustados")
-                ax[1, 0].set_ylabel("Residuos")
-                # valores predichos vs valores reales
-                ax[1, 1].scatter(y_test_original, y_pred_original, alpha=0.7)
-                ax[1, 1].set_title("Predicciones vs Valores reales")
-                ax[1, 1].set_xlabel("Valores reales")
-                ax[1, 1].set_ylabel("Predicciones")
-                ax[1, 1].plot([y_test_original.min(), y_test_original.max()], [y_test_original.min(), y_test_original.max()], 'r--')
-                ax[1, 1].grid(True)
+                         
+                influence = model.get_influence()
+                leverage = influence.hat_matrix_diag
+                studentized_residuals = influence.resid_studentized_external
+                cooks_d = influence.cooks_distance[0]
+                p = model.df_model + 1
                 
-                plt.tight_layout()
+                fig, axs = plt.subplots(2, 3, figsize=(18, 10))
+                fig.suptitle(f'Análisis de diagnóstico - Fold {fold + 1}', fontsize=16)
+                
+                # 1. Histograma de residuos
+                axs[0, 0].hist(residuos, bins=30, color='dodgerblue', edgecolor='k')
+                axs[0, 0].set_title('Histograma de residuos')
+                axs[0, 0].set_xlabel('Residuos')
+                axs[0, 0].set_ylabel('Frecuencia')
+                
+                # 2. Real vs Predicho
+                axs[0, 1].scatter(y_test_original, y_pred_original, color='dodgerblue', alpha=0.7, edgecolors='k')
+                axs[0, 1].plot([y_test_original.min(), y_test_original.max()], [y_test_original.min(), y_test_original.max()], 'r--', lw=2)
+                axs[0, 1].set_title('Precio real vs predicho')
+                axs[0, 1].set_xlabel('Precio real')
+                axs[0, 1].set_ylabel('Precio predicho')
+                
+                # 3. QQ Plot de residuos
+                sm.qqplot(residuos, line='45', fit=True, ax=axs[0, 2])
+                axs[0, 2].set_title('QQ Plot de residuos')
+                
+                # 4. Residuos vs Predicho
+                axs[1, 0].scatter(y_pred_original, residuos, color='dodgerblue', alpha=0.7, edgecolors='k')
+                axs[1, 0].axhline(0, color='r', linestyle='--', lw=2)
+                axs[1, 0].set_title('Residuos vs Precio predicho')
+                axs[1, 0].set_xlabel('Precio predicho')
+                axs[1, 0].set_ylabel('Residuos')
+                
+                # 5. Scale-Location plot
+                sns.scatterplot(x=y_pred_original, y=sqrt_standardized_residuals, ax=axs[1, 1], color='dodgerblue')
+                sns.regplot(x=y_pred_original, y=sqrt_standardized_residuals, scatter=False, ci=False, lowess=True, color='red', ax=axs[1, 1])
+                axs[1, 1].set_title('Scale-Location')
+                axs[1, 1].set_xlabel('Valores ajustados')
+                axs[1, 1].set_ylabel('√|Residuos estandarizados|')
+                axs[1, 1].grid(True)
+                
+                # 6. Residuals vs Leverage con Cook's Distance
+                sm.graphics.influence_plot(model, ax=axs[1, 2], criterion="cooks", alpha=0.6, markerfacecolor='lightblue', marker='o', fontsize=8)
+                axs[1, 2].set_title("Residuals vs Leverage con Cook's Distance")
+                
+                plt.tight_layout(rect=[0, 0, 1, 0.95])
                 diag_plot_path = f"diagnosticos_residuos_fold_{fold}.png"
                 plt.savefig(diag_plot_path)
                 mlflow.log_artifact(diag_plot_path)
@@ -675,7 +733,8 @@ def entrenar_evaluar_modelo_pca(context ,pca) :
 
     scaler_x = StandardScaler()
     X_scaled = scaler_x.fit_transform(X)
-    
+    scaler_y = StandardScaler()
+    y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1)).flatten()
 
     pca_model = PCA(n_components=n_componentes)
     X_pca = pca_model.fit_transform(X_scaled)
@@ -694,25 +753,28 @@ def entrenar_evaluar_modelo_pca(context ,pca) :
     with mlflow.start_run(run_name="validacion_cruzada_regresion_pca") as main_run:
         for fold, (train_idx, test_idx) in enumerate(kf.split(X_pca), 1):
             with mlflow.start_run(run_name=f"fold_{fold}", nested=True):
-                mlflow.statsmodels.autolog()
+                
 
                 X_train, X_test = X_pca[train_idx], X_pca[test_idx]
-                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+                y_train, y_test = y_scaled[train_idx], y_scaled[test_idx]
 
                 X_train_const = sm.add_constant(X_train)
                 X_test_const = sm.add_constant(X_test, has_constant='add')
 
                 model = sm.OLS(y_train, X_train_const).fit()
-                y_pred = model.predict(X_test_const)
+                y_pred_scaled = model.predict(X_test_const)
+
+                y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
+                y_test_inv = scaler_y.inverse_transform(y_test.reshape(-1, 1)).flatten()
                 
 
                
 
-                mse = mean_squared_error(y_test, y_pred)
-                mae = mean_absolute_error(y_test, y_pred)
-                # Calculate MAPE with original scale values
-                mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
-                r2 = r2_score(y_test, y_pred)
+                mse = mean_squared_error(y_test_inv, y_pred)
+                mae = mean_absolute_error(y_test_inv, y_pred)
+              
+                mape = np.mean(np.abs((y_test_inv - y_pred) / y_test_inv)) * 100
+                r2 = r2_score(y_test_inv, y_pred)
                 rmse = np.sqrt(mse)
                 mse_scores.append(mse)
                 mae_scores.append(mae)
@@ -724,7 +786,7 @@ def entrenar_evaluar_modelo_pca(context ,pca) :
                 mlflow.log_metric("mape_prueba", mape)
                 mlflow.log_metric("r2_prueba", r2)
                 mlflow.log_metric("rmse_prueba", rmse)
-                # guardar summary en artifact
+               
                 summary_text = model.summary().as_text()
                 summary_file = f"summary_fold_{fold}.txt"
                 with open(summary_file, "w") as f:
@@ -732,26 +794,75 @@ def entrenar_evaluar_modelo_pca(context ,pca) :
                 mlflow.log_artifact(summary_file)
                 os.remove(summary_file)
 
-                # hacer una fgi de 4*4 de los residuos con orientacion a objetos
-                fig, ax = plt.subplots(2, 2, figsize=(14, 10))
-                #histograma de residuos
-                ax[0, 0].hist((y_test - y_pred), bins=30, color='skyblue', edgecolor='black')
-                ax[0, 0].set_title("Histograma de residuos")
-                ax[0, 0].set_xlabel("Error")
-                ax[0, 0].set_ylabel("Frecuencia")
-                #valores predichos vs valores reales
-                ax[0, 1].scatter(y_test, y_pred, alpha=0.7)
-                ax[0, 1].set_title("Predicciones vs Valores reales")
-                ax[0, 1].set_xlabel("Valores reales")
-                ax[0, 1].set_ylabel("Predicciones")
+                # ---analisis de residuos--#
 
-                #qq plot de los residuos
-                sm.qqplot((y_test - y_pred), line='45', fit=True, ax=ax[1, 0])
-                ax[1, 0].set_title("QQ plot de los residuos")
+             
+                # --- Gráficos en una sola figura con subplots ---
+                fig, axs = plt.subplots(3, 2, figsize=(15, 15))
+                fig.suptitle(f"Fold {fold} - Diagnóstico de Residuales", fontsize=16)
 
-                #residuos vs valores ajustados
-                ax[1, 1].scatter(y_pred, (y_test - y_pred), alpha=0.5)    
-                plt.tight_layout()
+                residuos = y_test_inv - y_pred
+
+                # 1. Residuos vs Predicciones
+                axs[0, 0].scatter(y_pred, residuos, alpha=0.7)
+                axs[0, 0].axhline(0, color='r', linestyle='--', lw=2)
+                axs[0, 0].set_xlabel("Predicciones")
+                axs[0, 0].set_ylabel("Residuos")
+                axs[0, 0].set_title("Residuos vs Predicciones")
+                axs[0, 0].grid(True)
+
+                # 2. Reales vs Predicciones
+                axs[0, 1].scatter(y_test_inv, y_pred, alpha=0.7)
+                limites = [min(y_test_inv.min(), y_pred.min()), max(y_test_inv.max(), y_pred.max())]
+                axs[0, 1].plot(limites, limites, 'r--', lw=2)
+                axs[0, 1].set_xlabel("Valores Reales")
+                axs[0, 1].set_ylabel("Predicciones")
+                axs[0, 1].set_title("Reales vs Predicciones")
+                axs[0, 1].grid(True)
+
+                # 3. QQ Plot de residuos
+                stats.probplot(residuos, dist="norm", plot=axs[1, 0])
+                axs[1, 0].set_title("QQ Plot de Residuos")
+                axs[1, 0].grid(True)
+
+                # 4. Histograma de residuos
+                axs[1, 1].hist(residuos, bins=30, edgecolor='black')
+                axs[1, 1].set_xlabel("Residuos")
+                axs[1, 1].set_ylabel("Frecuencia")
+                axs[1, 1].set_title("Histograma de Residuos")
+                axs[1, 1].grid(True)
+
+                # 5. Residuals vs Leverage con Cook's Distance
+                # Este gráfico es un poco especial porque usa un gráfico externo,
+                # así que creamos un subplot extra y pasamos el ax para que lo dibuje allí.
+                ax_leverage = axs[2, 0]
+                plot_leverage_resid2(model, ax=ax_leverage)
+                ax_leverage.set_title("Residuals vs Leverage con Cook's Distance")
+
+                # Líneas Cook's distance
+                influence = model.get_influence()
+                leverage_vals = np.linspace(0.001, 1, 100)
+                p = model.df_model + 1  # número de parámetros (incluyendo intercepto)
+
+                for d in [0.5, 1.0]:
+                    bound = np.sqrt(d * p * (1 - leverage_vals) / leverage_vals)
+                    ax_leverage.plot(leverage_vals, bound, 'r--', lw=1)
+                    ax_leverage.plot(leverage_vals, -bound, 'r--', lw=1)
+                    ax_leverage.text(0.97, bound[-1] + 0.2, f"Cook's D = {d}", color='red', fontsize=9, ha='right')
+
+                # 6. Scale-Location plot
+                standardized_residuals = residuos / np.std(residuos)
+                sqrt_standardized_residuals = np.sqrt(np.abs(standardized_residuals))
+
+                ax_scale_loc = axs[2, 1]
+                sns.scatterplot(x=y_pred, y=sqrt_standardized_residuals, ax=ax_scale_loc)
+                sns.regplot(x=y_pred, y=sqrt_standardized_residuals, scatter=False, ci=False, lowess=True, color='red', ax=ax_scale_loc)
+                ax_scale_loc.set_xlabel('Valores ajustados')
+                ax_scale_loc.set_ylabel('√|Residuos estandarizados|')
+                ax_scale_loc.set_title('Gráfico Scale-Location')
+                ax_scale_loc.grid(True)
+
+                plt.tight_layout(rect=[0, 0, 1, 0.96])  # espacio para el título
                 diag_plot_path = f"diagnosticos_residuos_fold_{fold}.png"
                 plt.savefig(diag_plot_path)
                 mlflow.log_artifact(diag_plot_path)

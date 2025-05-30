@@ -16,7 +16,7 @@ Servicios incluidos:
 
 Para iniciar los servicios:
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Conda Environment
@@ -28,7 +28,7 @@ environment.yml
 Para crear y activar el entorno:
 ```bash
 # Crear el entorno
-conda env create -f environment.yml
+conda env create -f toyota_environment.yml
 
 # Activar el entorno
 conda activate toyota
@@ -40,7 +40,7 @@ poetry install
 ### DBT Profile
 El perfil de DBT se encuentra en:
 ```
-dbt/profiles.yml
+dbt_toyota/profile.yml
 ```
 
 ## Documentación Detallada

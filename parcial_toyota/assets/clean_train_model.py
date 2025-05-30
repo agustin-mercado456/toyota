@@ -45,8 +45,19 @@ def seleccion_lambda_ridge(context,df_toyota):
     url=Path(__file__).parent.parent.parent / 'output' / 'data_clean.csv'
     df_toyota_ridge = pd.read_csv(url)
 
+    dummies = pd.get_dummies(df_toyota_ridge['fuel_type_encoded'], prefix='fuel_type')
+
+    # Unir las dummies al DataFrame original
+    df_toyota_ridge = pd.concat([df_toyota_ridge, dummies], axis=1)
+
+# Eliminar la columna original 'fuel_type_encoded'
+    df_toyota_ridge = df_toyota_ridge.drop('fuel_type_encoded', axis=1)
+
     x = df_toyota_ridge.drop(columns=['price'])
     y = df_toyota_ridge['price']
+
+
+
 
     # Escalado
     scaler = StandardScaler()
@@ -87,8 +98,8 @@ def entrenar_evalular_modelo_ridge(context, ridge):
 
     scaler_x = StandardScaler()
     X_scaled = scaler_x.fit_transform(X)
-    scaler_y = StandardScaler()
-    y_scaled = (scaler_y.fit_transform(y.values.reshape(-1, 1))).ravel()
+    #scaler_y = StandardScaler()
+    #y_scaled = (scaler_y.fit_transform(y.values.reshape(-1, 1))).ravel()
 
 
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -105,7 +116,7 @@ def entrenar_evalular_modelo_ridge(context, ridge):
                 mlflow.sklearn.autolog()  
                 X_train, X_test = X_scaled[train_idx], X_scaled[test_idx]
 
-                y_train, y_test = y_scaled[train_idx], y_scaled[test_idx]
+                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 
                 model = Ridge(alpha=best_alpha)
                 model.fit(X_train, y_train)
@@ -123,7 +134,9 @@ def entrenar_evalular_modelo_ridge(context, ridge):
 
                 mse = mean_squared_error(y_test, y_pred)
                 mae = mean_absolute_error(y_test, y_pred)
-                mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+                # Add small epsilon to avoid division by zero in MAPE
+                epsilon = 1e-10
+                mape = np.mean(np.abs((y_test - y_pred) / (y_test + epsilon))) * 100
                 r2 = r2_score(y_test, y_pred)
                 rmse = np.sqrt(mse)
                 mse_scores.append(mse)
@@ -226,15 +239,14 @@ def seleccion_variables_lasso(context,df_toyota):
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
-    scaler_y = StandardScaler()
-    y_scaled = (scaler_y.fit_transform(y.values.reshape(-1, 1))).ravel()
+    
 
 
     alphas = np.logspace(-1, 10, 1000)  
 
 
     lasso_cv_model = LassoCV(alphas=alphas, cv=5, random_state=42, max_iter=10000)
-    lasso_cv_model.fit(X_scaled, y_scaled)
+    lasso_cv_model.fit(X_scaled, y)
 
 
     optimal_alpha = lasso_cv_model.alpha_
@@ -282,12 +294,12 @@ def entrenar_evalular_modelo_lasso(context, df_toyota_lasso_filtrado):
     scaler_x = StandardScaler()
     X_scaled = scaler_x.fit_transform(X)
 
-    scaler_y = StandardScaler()
-    y_scaled = (scaler_y.fit_transform(y.values.reshape(-1, 1))).ravel()
+    # scaler_y = StandardScaler()
+    # y_scaled = (scaler_y.fit_transform(y.values.reshape(-1, 1))).ravel()
 
     lambdas = np.logspace(-1, 10, num=1000)
     lasso_cv = LassoCV(alphas=lambdas, cv=5, random_state=42, max_iter=10000)
-    lasso_cv.fit(X_scaled, y_scaled)
+    lasso_cv.fit(X_scaled, y)
     best_alpha = lasso_cv.alpha_
 
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
@@ -304,7 +316,7 @@ def entrenar_evalular_modelo_lasso(context, df_toyota_lasso_filtrado):
                 mlflow.sklearn.autolog()  
                 X_train, X_test = X_scaled[train_idx], X_scaled[test_idx]
 
-                y_train, y_test = y_scaled[train_idx], y_scaled[test_idx]
+                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 
                 model = Lasso(alpha=best_alpha, max_iter=10000)
                 model.fit(X_train, y_train)
@@ -322,7 +334,9 @@ def entrenar_evalular_modelo_lasso(context, df_toyota_lasso_filtrado):
 
                 mse = mean_squared_error(y_test, y_pred)
                 mae = mean_absolute_error(y_test, y_pred)
-                mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+                # Add small epsilon to avoid division by zero in MAPE
+                epsilon = 1e-10
+                mape = np.mean(np.abs((y_test - y_pred) / (y_test + epsilon))) * 100
                 r2 = r2_score(y_test, y_pred)
                 rmse = np.sqrt(mse)
                 mse_scores.append(mse)
@@ -444,11 +458,17 @@ def filtrado_y_normalizado(context ,df_toyota) :
 
     df_filtrado_normalizado = df_filtrado_normalizado[mascara_km]
 
+
+    df_escaler = {
+        "df_filtrado_normalizado": df_filtrado_normalizado,
+        "scaler": scaler
+    }
+
    
     
     #
     
-    return df_filtrado_normalizado
+    return df_escaler
 
 
 
@@ -458,16 +478,18 @@ def filtrado_y_normalizado(context ,df_toyota) :
     deps=[filtrado_y_normalizado],
     required_resource_keys={"mlflow"},
     group_name="MODEL_TRAING_TEST",
-    ins={"df_filtrado_normalizado": AssetIn(key=AssetKey("filtrado_y_normalizado"))}
+    ins={"df_escaler": AssetIn(key=AssetKey("filtrado_y_normalizado"))}
 )
-def entrenar_modelo_evaluar_mco(context, df_filtrado_normalizado):
+def entrenar_modelo_evaluar_mco(context, df_escaler):
     mlflow = context.resources.mlflow
-
+    scaler_y = MinMaxScaler()
+    df_filtrado_normalizado = df_escaler['df_filtrado_normalizado']
+    scaler = df_escaler['scaler']
    
     X = df_filtrado_normalizado.drop(columns=['price'])
     y = df_filtrado_normalizado['price']
 
-    k = 5
+    k = 5   
     kf = KFold(n_splits=k, shuffle=True, random_state=42)
 
     mse_scores = []
@@ -486,7 +508,7 @@ def entrenar_modelo_evaluar_mco(context, df_filtrado_normalizado):
                 mlflow.statsmodels.autolog()
 
                 X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+                y_train, y_test =y.iloc[train_idx], y.iloc[test_idx]
 
                 X_train_const = sm.add_constant(X_train)
                 X_test_const = sm.add_constant(X_test, has_constant='add')
@@ -494,9 +516,17 @@ def entrenar_modelo_evaluar_mco(context, df_filtrado_normalizado):
                 model = sm.OLS(y_train, X_train_const).fit()
                 y_pred = model.predict(X_test_const)
 
-                mse = mean_squared_error(y_test, y_pred)
-                mae = mean_absolute_error(y_test, y_pred)
-                mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+                # Inverse transform predictions and actual values for MAPE calculation
+                y_test_original = scaler.inverse_transform(y_test.to_numpy().reshape(-1, 1)).ravel()
+
+
+                y_pred_original = scaler.inverse_transform(y_pred.to_numpy().reshape(-1, 1)).ravel()
+
+                mse = mean_squared_error(y_test_original, y_pred_original)
+                mae = mean_absolute_error(y_test_original, y_pred_original)
+                # Calculate MAPE with original scale values
+                mape = np.mean(np.abs((y_test_original - y_pred_original) / y_test_original)) * 100
+                
                 r2 = r2_score(y_test, y_pred)
                 rmse = np.sqrt(mse)
                 mse_scores.append(mse)
@@ -522,8 +552,8 @@ def entrenar_modelo_evaluar_mco(context, df_filtrado_normalizado):
                
 
                 # ---------- Gráficos diagnósticos ----------
-                residuals = y_test - y_pred
-                fitted_vals = y_pred
+                residuals = y_test_original - y_pred_original
+                fitted_vals = y_pred_original
 
                 fig, ax = plt.subplots(2, 2, figsize=(14, 10))
                 ax[0, 0].hist(residuals, bins=30, color='skyblue', edgecolor='black')
@@ -540,11 +570,11 @@ def entrenar_modelo_evaluar_mco(context, df_filtrado_normalizado):
                 ax[1, 0].set_xlabel("Valores ajustados")
                 ax[1, 0].set_ylabel("Residuos")
                 # valores predichos vs valores reales
-                ax[1, 1].scatter(y_test, y_pred, alpha=0.7)
+                ax[1, 1].scatter(y_test_original, y_pred_original, alpha=0.7)
                 ax[1, 1].set_title("Predicciones vs Valores reales")
                 ax[1, 1].set_xlabel("Valores reales")
                 ax[1, 1].set_ylabel("Predicciones")
-                ax[1, 1].plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
+                ax[1, 1].plot([y_test_original.min(), y_test_original.max()], [y_test_original.min(), y_test_original.max()], 'r--')
                 ax[1, 1].grid(True)
                 
                 plt.tight_layout()
@@ -645,8 +675,7 @@ def entrenar_evaluar_modelo_pca(context ,pca) :
 
     scaler_x = StandardScaler()
     X_scaled = scaler_x.fit_transform(X)
-    scaler_y =  StandardScaler()
-    y_scaled = scaler_y.fit_transform(y.values.reshape(-1, 1))
+    
 
     pca_model = PCA(n_components=n_componentes)
     X_pca = pca_model.fit_transform(X_scaled)
@@ -668,20 +697,22 @@ def entrenar_evaluar_modelo_pca(context ,pca) :
                 mlflow.statsmodels.autolog()
 
                 X_train, X_test = X_pca[train_idx], X_pca[test_idx]
-                y_train, y_test = y_scaled[train_idx], y_scaled[test_idx]
+                y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 
                 X_train_const = sm.add_constant(X_train)
                 X_test_const = sm.add_constant(X_test, has_constant='add')
 
                 model = sm.OLS(y_train, X_train_const).fit()
                 y_pred = model.predict(X_test_const)
-                y_test_flat = y_test.ravel()
-                y_pred_flat = y_pred.ravel()
+                
 
-                mse = mean_squared_error(y_test_flat, y_pred_flat)
-                mae = mean_absolute_error(y_test_flat, y_pred_flat)
-                mape = np.mean(np.abs((y_test_flat - y_pred_flat) / y_test_flat)) * 100
-                r2 = r2_score(y_test_flat, y_pred_flat)
+               
+
+                mse = mean_squared_error(y_test, y_pred)
+                mae = mean_absolute_error(y_test, y_pred)
+                # Calculate MAPE with original scale values
+                mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+                r2 = r2_score(y_test, y_pred)
                 rmse = np.sqrt(mse)
                 mse_scores.append(mse)
                 mae_scores.append(mae)
@@ -704,22 +735,22 @@ def entrenar_evaluar_modelo_pca(context ,pca) :
                 # hacer una fgi de 4*4 de los residuos con orientacion a objetos
                 fig, ax = plt.subplots(2, 2, figsize=(14, 10))
                 #histograma de residuos
-                ax[0, 0].hist((y_test_flat - y_pred_flat), bins=30, color='skyblue', edgecolor='black')
+                ax[0, 0].hist((y_test - y_pred), bins=30, color='skyblue', edgecolor='black')
                 ax[0, 0].set_title("Histograma de residuos")
                 ax[0, 0].set_xlabel("Error")
                 ax[0, 0].set_ylabel("Frecuencia")
                 #valores predichos vs valores reales
-                ax[0, 1].scatter(y_test_flat, y_pred_flat, alpha=0.7)
+                ax[0, 1].scatter(y_test, y_pred, alpha=0.7)
                 ax[0, 1].set_title("Predicciones vs Valores reales")
                 ax[0, 1].set_xlabel("Valores reales")
                 ax[0, 1].set_ylabel("Predicciones")
 
                 #qq plot de los residuos
-                sm.qqplot((y_test_flat - y_pred_flat), line='45', fit=True, ax=ax[1, 0])
+                sm.qqplot((y_test - y_pred), line='45', fit=True, ax=ax[1, 0])
                 ax[1, 0].set_title("QQ plot de los residuos")
 
                 #residuos vs valores ajustados
-                ax[1, 1].scatter(y_pred_flat, (y_test_flat - y_pred_flat), alpha=0.5)    
+                ax[1, 1].scatter(y_pred, (y_test - y_pred), alpha=0.5)    
                 plt.tight_layout()
                 diag_plot_path = f"diagnosticos_residuos_fold_{fold}.png"
                 plt.savefig(diag_plot_path)
@@ -752,4 +783,4 @@ def entrenar_evaluar_modelo_pca(context ,pca) :
         
    
     
-    return metricas_pca
+    return metricas_pca 

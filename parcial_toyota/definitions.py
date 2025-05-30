@@ -45,12 +45,16 @@ defs = Definitions(
             "experiment_name": "toyota_ridge",
         }),
         "mlflow_toyota_lasso": mlflow_tracking.configured({
-            "mlflow_tracking_uri": "http://localhost:5000",
+            "mlflow_tracking_uri": "http://localhost:5000",  
                 "experiment_name": "toyota_lasso",
             }),
         "mlflow_toyota_pca": mlflow_tracking.configured({
             "mlflow_tracking_uri": "http://localhost:5000",
             "experiment_name": "toyota_pca",
+        }),
+        "comparacion_modelos": mlflow_tracking.configured({
+            "mlflow_tracking_uri": "http://localhost:5000",
+            "experiment_name": "comparacion_modelos",
         }),
         "output_notebook_io_manager": ConfigurableLocalOutputNotebookIOManager(),
     },

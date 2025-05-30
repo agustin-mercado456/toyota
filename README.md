@@ -22,7 +22,7 @@ docker compose up -d
 ### Conda Environment
 El archivo de entorno conda se encuentra en la raíz del proyecto:
 ```
-environment.yml
+toyota_environment.yml
 ```
 
 Para crear y activar el entorno:
